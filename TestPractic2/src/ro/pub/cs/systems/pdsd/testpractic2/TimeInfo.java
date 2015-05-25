@@ -16,7 +16,7 @@ public class TimeInfo {
 		this.minute   = minute;
 	}
 	
-	public void setHour(String temperature) {
+	public void setHour(String hour) {
 		this.hour = hour;
 	}
 	
@@ -28,7 +28,7 @@ public class TimeInfo {
 		return minute;
 	}
 	
-	public void setMinute() {
+	public void setMinute(String minute) {
 		this.minute   = minute;
 	}
 }

@@ -18,12 +18,6 @@ import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
 import android.util.Log;
 
@@ -43,48 +37,58 @@ public class CommunicationThread extends Thread {
 				BufferedReader bufferedReader = Utilities.getReader(socket);
 				PrintWriter    printWriter    = Utilities.getWriter(socket);
 				if (bufferedReader != null && printWriter != null) {
-					Log.i(Constants.TAG, "[COMMUNICATION THREAD] Waiting for parameters from client (city / information type)!");
+					Log.i(Constants.TAG, "[COMMUNICATION THREAD] Waiting for parameters from client (ip / command)!");
 					String ip = bufferedReader.readLine();
-					String hour            = bufferedReader.readLine();
-					String minute = bufferedReader.readLine();
+					String command = bufferedReader.readLine();
 					HashMap<String, TimeInfo> data = serverThread.getData();
-					TimeInfo timeInfo = null;
-					if (hour != null && !hour.isEmpty() && minute != null && !minute.isEmpty()) {
+					TimeInfo timeInfo = new TimeInfo();
+					
+					if(command.compareTo("set".toString()) == 0) {
+						String hour            = bufferedReader.readLine();
+						String minute = bufferedReader.readLine();
+						
 						if (data.containsKey(ip)) {
 							Log.i(Constants.TAG, "[COMMUNICATION THREAD] Getting the information from the cache...");
 							timeInfo = data.get(ip);
-						} else {
+						}
+						
+						timeInfo.setHour(hour);
+						timeInfo.setMinute(minute);
+						serverThread.setData(ip, timeInfo);
+					} else 
+						if(command.compareTo("reset".toString()) == 0) {
+							data.remove(ip);
+						} else
+					
+					if (command.compareTo("poll".toString()) == 0) {
 							Log.i(Constants.TAG, "[COMMUNICATION THREAD] Getting the information from the webservice...");
 							HttpClient httpClient = new DefaultHttpClient();
 							HttpGet httpGet = new HttpGet("http://www.timeapi.org/utc/now");
 							ResponseHandler<String> responseHandler = new BasicResponseHandler();
 							String pageSourceCode = httpClient.execute(httpGet, responseHandler);
 							if (pageSourceCode != null) {
+								String serverHour = pageSourceCode.substring(11, 12); 
+								String serverMinute = pageSourceCode.substring(14, 15);
 								
+								String state = null;
+								
+								timeInfo = data.get(ip);
+								
+								if(Integer.parseInt(timeInfo.getHour()) < Integer.parseInt(serverHour)) {
+									printWriter.println("inactive\n");
+//									printWriter.flush();
+									
+									if(Integer.parseInt(timeInfo.getMinute()) < Integer.parseInt(serverMinute)) {
+										
+									}
+								}
 							} else {
 								Log.e(Constants.TAG, "[COMMUNICATION THREAD] Error getting the information from the webservice!");
 							}
-						}
+					
 						
-//						if (timeInfo != null) {
-//							String result = null;
-//							if (Constants.ALL.equals(informationType)) {
-//								result = weatherForecastInformation.toString();
-//							} else if (Constants.TEMPERATURE.equals(informationType)) {
-//								result = weatherForecastInformation.getTemperature();
-//							} else if (Constants.WIND_SPEED.equals(informationType)) {
-//								result = weatherForecastInformation.getWindSpeed();
-//							} else if (Constants.CONDITION.equals(informationType)) {
-//								result = weatherForecastInformation.getCondition();
-//							} else if (Constants.HUMIDITY.equals(informationType)) {
-//								result = weatherForecastInformation.getHumidity();
-//							} else if (Constants.PRESSURE.equals(informationType)) {
-//								result = weatherForecastInformation.getPressure();
-//							} else {
-//								result = "Wrong information type (all / temperature / wind_speed / condition / humidity / pressure)!";
-//							}
-//							printWriter.println(result);
-//							printWriter.flush();
+//						
+//							
 //						} else {
 //							Log.e(Constants.TAG, "[COMMUNICATION THREAD] Weather Forecast information is null!");
 //						}
@@ -92,6 +96,7 @@ public class CommunicationThread extends Thread {
 					} else {
 						Log.e(Constants.TAG, "[COMMUNICATION THREAD] Error receiving parameters from client (city / information type)!");
 					}
+					
 				} else {
 					Log.e(Constants.TAG, "[COMMUNICATION THREAD] BufferedReader / PrintWriter are null!");
 				}
